@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Volunteer Dashboard</title>
+
+<style>
+:root{
+  --bg:#e0f2fe;
+  --card:#fff;
+  --text:#111;
+  --primary:#4f46e5;
+  --accent:#f59e0b;
+  --shadow:0 10px 20px rgba(0,0,0,.1);
+}
+.dark{
+  --bg:#0b0b0b;
+  --card:#1a1a1a;
+  --text:#fff;
+  --shadow:0 10px 20px rgba(0,0,0,.6);
+}
+
+body{
+  margin:0;
+  font-family:"Hind Siliguri", sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  transition:.4s;
+}
+.container{
+  max-width:480px;
+  margin:auto;
+  padding:16px;
+}
+.header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.header h1{
+  font-size:22px;
+  color:var(--primary);
+}
+.toggle{
+  font-size:24px;
+  cursor:pointer;
+}
+.card{
+  background:var(--card);
+  border-radius:20px;
+  box-shadow:var(--shadow);
+  padding:16px;
+  margin-top:16px;
+  animation:fade 0.6s ease;
+}
+@keyframes fade{
+  from{opacity:0;transform:translateY(10px);}
+  to{opacity:1;transform:none;}
+}
+input,button{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border-radius:14px;
+  border:none;
+  font-size:15px;
+}
+input{background:#e5e7eb;color:#111;}
+button{background:var(--primary);color:#fff;font-weight:bold;cursor:pointer;}
+.badge{
+  padding:4px 10px;
+  border-radius:12px;
+  font-size:12px;
+  display:inline-block;
+  margin-top:6px;
+}
+.on{background:#22c55e;color:#fff;}
+.standby{background:#facc15;color:#000;}
+.off{background:#ef4444;color:#fff;}
+.spinner{text-align:center;font-size:24px;display:none;margin-top:10px;}
+.emergency a{
+  display:block;
+  text-decoration:none;
+  background:#ef4444;
+  color:#fff;
+  padding:10px;
+  border-radius:12px;
+  margin-top:8px;
+  text-align:center;
+}
+.adminList p{
+  font-size:14px;
+  border-bottom:1px dashed #ccc;
+  padding:4px 0;
+}
+.timeline{
+  font-size:13px;
+  margin-top:8px;
+}
+.motivation{
+  margin-top:8px;
+  font-style:italic;
+  color:var(--accent);
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+  <h1>স্বেচ্ছাসেবক যাচাই</h1>
+  <div class="toggle" onclick="toggleMode()">🌙</div>
+</div>
+
+<div class="card">
+  <input id="vid" placeholder="Volunteer ID লিখুন">
+  <button onclick="verify()">Verify</button>
+</div>
+
+<div class="spinner" id="loader">⏳ যাচাই হচ্ছে...</div>
+<div id="result"></div>
+
+<div class="card">
+  <button onclick="admin()">🔐 Admin Dashboard</button>
+</div>
+<div id="adminPanel"></div>
+
+<div class="card emergency">
+  <h3>🚨 জরুরি যোগাযোগ</h3>
+  <a href="tel:999">📞 জাতীয় জরুরি সেবা: 999</a>
+  <a href="tel:01XXXXXXXXX">🏫 স্কুল অফিস</a>
+  <a href="tel:01XXXXXXXXX">👨‍🏫 দায়িত্বপ্রাপ্ত শিক্ষক</a>
+  <a href="tel:01XXXXXXXXX">🚓 পুলিশ</a>
+</div>
+
+</div>
+
+<script>
+// 🔴 শুধু এখানেই edit করো 🔴
+const ADMIN_PASS="farewell2026";
+const volunteers=[
+{id:"V101",name:"আরিফুল ইসলাম",role:"টিম লিডার",pos:"মেইন গেট",status:"On Duty",class:"১০ম",section:"A",roll:"05",timeline:["09:30 Arrival","10:00 On Duty","12:30 Break","02:00 Shift End"],motivation:"আপনার দায়িত্ব আমাদের অনুষ্ঠানের সাফল্য নির্ধারণ করে"},
+{id:"V102",name:"নাফিস হাসান",role:"ভলেন্টিয়ার",pos:"মঞ্চ এলাকা",status:"On Duty",class:"৯ম",section:"B",roll:"12",timeline:["09:30 Arrival","10:00 On Duty","12:30 Break"],motivation:"শৃঙ্খলাই সফলতার চাবিকাঠি"},
+{id:"V103",name:"সাদিয়া আক্তার",role:"ভলেন্টিয়ার",pos:"অতিথি ব্যবস্থাপনা",status:"Standby",class:"১০ম",section:"A",roll:"18",timeline:["09:30 Arrival","Standby"],motivation:"দায়িত্ব পালনেই গর্ব"},
+{id:"V104",name:"রাব্বি হোসেন",role:"ভলেন্টিয়ার",pos:"শৃঙ্খলা রক্ষা",status:"On Duty",class:"৯ম",section:"C",roll:"07",timeline:["09:30 Arrival","10:00 On Duty"],motivation:"নিষ্ঠা ও দায়িত্বপরায়ণতা গুরুত্বপূর্ণ"},
+{id:"V105",name:"মেহেদী হাসান",role:"ভলেন্টিয়ার",pos:"প্রবেশ পথ",status:"On Duty",class:"৮ম",section:"A",roll:"21",timeline:["09:30 Arrival","10:00 On Duty"],motivation:"আপনার সহায়তা মূল্যবান"}
+];
+
+function verify(){
+ const id=document.getElementById("vid").value.trim();
+ const res=document.getElementById("result");
+ document.getElementById("loader").style.display="block";
+ res.innerHTML="";
+ setTimeout(()=>{
+  document.getElementById("loader").style.display="none";
+  const v=volunteers.find(x=>x.id===id);
+  if(!v){res.innerHTML="<div class='card'>❌ ID পাওয়া যায়নি</div>";return;}
+  let tl="";
+  v.timeline.forEach(t=>{tl+=`<div class='timeline'>• ${t}</div>`;});
+  res.innerHTML=`
+  <div class="card">
+    <h3>${v.name}</h3>
+    <p>দায়িত্ব: ${v.role}</p>
+    <p>অবস্থান: ${v.pos}</p>
+    <span class="badge ${v.status=='On Duty'?'on':v.status=='Standby'?'standby':'off'}">${v.status}</span>
+    <p>শ্রেণি: ${v.class} | সেকশন: ${v.section} | রোল: ${v.roll}</p>
+    ${tl}
+    <div class="motivation">💡 ${v.motivation}</div>
+  </div>`;
+ },800);
+}
+
+function admin(){
+ const p=prompt("Admin Password:");
+ if(p!==ADMIN_PASS){alert("❌ ভুল পাসওয়ার্ড");return;}
+ let html="<div class='card adminList'><h3>📋 সকল ভলেন্টিয়ার</h3>";
+ volunteers.forEach(v=>{
+  html+=`<p>${v.id} | ${v.name} | ${v.role} | ${v.pos} | ${v.status} | ${v.class} | ${v.section} | ${v.roll}</p>`;
+ });
+ html+="</div>";
+ document.getElementById("adminPanel").innerHTML=html;
+}
+
+function toggleMode(){
+ document.body.classList.toggle("dark");
+}
+</script>
+
+</body>
+</html>
